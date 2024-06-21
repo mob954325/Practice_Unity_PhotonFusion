@@ -288,7 +288,7 @@ MonoBehaviour:
   jumpImpulse: 8
   acceleration: 10
   braking: 10
-  maxSpeed: 2
+  maxSpeed: 10
   rotationSpeed: 15
 --- !u!114 &8821479915388361611
 MonoBehaviour:
@@ -302,4 +302,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 75e5611f9b6cbbc41abfd6c01c00dcd2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  speed: 5
+  speed: 10

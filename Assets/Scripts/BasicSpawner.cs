@@ -1,22 +1,50 @@
 using System;
+using System.Threading;
 using System.Collections;
 using System.Collections.Generic;
+
 using UnityEngine;
+using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
+
 using Fusion;
 using Fusion.Sockets;
+using ExitGames.Client.Photon.StructWrapping;
+using Unity.VisualScripting;
 
 public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
 {
+    /// <summary>
+    /// 오브젝트가 만드는 네트워크러너
+    /// </summary>
     private NetworkRunner myRunner = null;    // 네트워크 매니저 역할
 
+    /// <summary>
+    /// 플레이어 오브젝트 프리팹
+    /// </summary>
     [SerializeField]
-    private NetworkPrefabRef playerPrefab;  // 플레이어 프리팹
+    private NetworkPrefabRef playerPrefab;
 
     /// <summary>
-    /// 플레이어 딕셔너리 ( 플레이어 레퍼런스, 네트워크 오브젝트 )
+    /// 인풋액션
+    /// </summary>
+    PlayerInputActions inputActions;
+
+    /// <summary>
+    /// 접속자 딕셔너리 ( 플레이어 레퍼런스, 네트워크 오브젝트 )
     /// </summary>
     private Dictionary<PlayerRef, NetworkObject> spawnedCharacters = new Dictionary<PlayerRef, NetworkObject>();
+
+    /// <summary>
+    /// 입력받은 방향
+    /// </summary>
+    Vector3 inputDirection = Vector3.zero;
+
+    void Awake()
+    {
+        inputActions = new PlayerInputActions();
+    }
+
 
     /// <summary>
     /// 게임 세션을 열거나 접속하는 함수
@@ -43,6 +71,33 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
             Scene = scene,
             SceneManager = gameObject.AddComponent<NetworkSceneManagerDefault>()
         });
+
+        InputEnable();
+    }
+
+    void InputEnable()
+    {
+        inputActions.Player.Enable();
+        inputActions.Player.Move.performed += onMove;
+        inputActions.Player.Move.canceled += onMove;
+    }
+
+    private void OnDisable()
+    {
+        InputDisable();
+    }
+
+    void InputDisable()
+    {
+        inputActions.Player.Move.canceled -= onMove;
+        inputActions.Player.Move.performed -= onMove;
+        inputActions.Player.Enable();
+    }
+
+    private void onMove(InputAction.CallbackContext context)
+    {
+        Vector2 read = context.ReadValue<Vector2>();
+        inputDirection.Set(read.x, 0, read.y);
     }
 
     /// <summary>
@@ -107,23 +162,46 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
     {
         NetworkInputData data = new NetworkInputData(); // 우리가 만든 데이터 타입을 new하기
 
-        if(Input.GetKey(KeyCode.W))     // 이 순간 W키가 눌러져있는지 확인 ( 결과가 true면 W키가 눌려져있다. false면 안눌려져있디.)
-        {
-            data.direction += Vector3.forward;
-        }
-        if (Input.GetKey(KeyCode.A))
-        {
-            data.direction += Vector3.left;
+        // 인풋 매니저으로 키 입력 상태 확인하는 방식
+        //if (Input.GetKey(KeyCode.W))     // 이 순간 W키가 눌러져있는지 확인 ( 결과가 true면 W키가 눌려져있다. false면 안눌려져있디.)
+        //{
+        //    data.direction += Vector3.forward;
+        //}
+        //if (Input.GetKey(KeyCode.A))
+        //{
+        //    data.direction += Vector3.left;
+        //
+        //}
+        //if (Input.GetKey(KeyCode.S))
+        //{
+        //    data.direction += Vector3.back;
+        //}
+        //if (Input.GetKey(KeyCode.D))
+        //{
+        //    data.direction += Vector3.right;
+        //}
 
-        }
-        if (Input.GetKey(KeyCode.S))
-        {
-            data.direction += Vector3.back;
-        }
-        if (Input.GetKey(KeyCode.D))
-        {
-            data.direction += Vector3.right;
-        }
+
+        // 인풋 시스템으로 키 입력 상태 확인하는 방식
+        //if (Keyboard.current.wKey.isPressed)     // 이 순간 W키가 눌러져있는지 확인 ( 결과가 true면 W키가 눌려져있다. false면 안눌려져있디.)
+        //{
+        //    data.direction += Vector3.forward;
+        //}
+        //if(Keyboard.current.aKey.isPressed)
+        //{
+        //    data.direction += Vector3.left;
+        //
+        //}
+        //if(Keyboard.current.sKey.isPressed)
+        //{
+        //    data.direction += Vector3.back;
+        //}
+        //if(Keyboard.current.dKey.isPressed)
+        //{
+        //    data.direction += Vector3.right;
+        //}
+
+        data.direction = inputDirection;
 
         input.Set(data);    // 결정된 입력을 서버쪽으로 전달
     }

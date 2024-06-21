@@ -9,6 +9,8 @@ public class Player : NetworkBehaviour
     public float speed = 5f;
     NetworkCharacterController cc;
 
+    Vector3 forward = Vector3.forward;
+
     void Awake()
     {
         cc = GetComponent<NetworkCharacterController>();
@@ -18,11 +20,18 @@ public class Player : NetworkBehaviour
     /// </summary>
     public override void FixedUpdateNetwork()
     {
-        if(GetInput(out NetworkInputData data))    // 서버 쪽에서 입력 정보 받아오기
+        if(GetInput(out NetworkInputData data))     // 서버 쪽에서 입력 정보 받아오기
         {
-            data.direction.Normalize();           // 유닛벡터로 이동
+            // data.direction.Normalize();          // 유닛벡터로 이동
 
             cc.Move(Runner.DeltaTime * speed * data.direction); // 초당 moveSpeed의 속도로 data.direction 방향으로 이동
+
+            if(data.direction.sqrMagnitude > 0)    // 이동 중이다
+            {
+                forward = data.direction;          // 회전 도중에 forward 방향으로 공이 발사되는 것을 방지
+            }
+
+            // 발사 https://doc.photonengine.com/fusion/current/tutorials/host-mode-basics/3-prediction#kinematic-object
         }
     }
 }

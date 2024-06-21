@@ -40,6 +40,11 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
     /// </summary>
     Vector3 inputDirection = Vector3.zero;
 
+    /// <summary>
+    /// 발사 버튼을 눌렀는지 확인 여부
+    /// </summary>
+    bool isShootPress = false;
+
     void Awake()
     {
         inputActions = new PlayerInputActions();
@@ -80,6 +85,8 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
         inputActions.Player.Enable();
         inputActions.Player.Move.performed += onMove;
         inputActions.Player.Move.canceled += onMove;
+        inputActions.Player.Shoot.performed += onShootPress;
+        inputActions.Player.Shoot.canceled += onShootRelease;
     }
 
     private void OnDisable()
@@ -89,6 +96,8 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
 
     void InputDisable()
     {
+        inputActions.Player.Shoot.canceled -= onShootRelease;
+        inputActions.Player.Shoot.performed -= onShootPress;
         inputActions.Player.Move.canceled -= onMove;
         inputActions.Player.Move.performed -= onMove;
         inputActions.Player.Enable();
@@ -98,6 +107,16 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
     {
         Vector2 read = context.ReadValue<Vector2>();
         inputDirection.Set(read.x, 0, read.y);
+    }
+
+    private void onShootPress(InputAction.CallbackContext context)
+    {
+        isShootPress = true;
+    }
+
+    private void onShootRelease(InputAction.CallbackContext context)
+    {
+        isShootPress = false;
     }
 
     /// <summary>
@@ -162,7 +181,7 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
     {
         NetworkInputData data = new NetworkInputData(); // 우리가 만든 데이터 타입을 new하기
 
-        // 인풋 매니저으로 키 입력 상태 확인하는 방식
+/*        // 인풋 매니저으로 키 입력 상태 확인하는 방식
         //if (Input.GetKey(KeyCode.W))     // 이 순간 W키가 눌러져있는지 확인 ( 결과가 true면 W키가 눌려져있다. false면 안눌려져있디.)
         //{
         //    data.direction += Vector3.forward;
@@ -181,8 +200,7 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
         //    data.direction += Vector3.right;
         //}
 
-
-        // 인풋 시스템으로 키 입력 상태 확인하는 방식
+        // 인풋 시스템으로 키 입력 상태 확인하는 방식 ( 이벤트 드리븐 방식 이점 x)
         //if (Keyboard.current.wKey.isPressed)     // 이 순간 W키가 눌러져있는지 확인 ( 결과가 true면 W키가 눌려져있다. false면 안눌려져있디.)
         //{
         //    data.direction += Vector3.forward;
@@ -199,9 +217,10 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
         //if(Keyboard.current.dKey.isPressed)
         //{
         //    data.direction += Vector3.right;
-        //}
+        //}*/
 
         data.direction = inputDirection;
+        data.buttons.Set(NetworkInputData.MouseButtonLeft, isShootPress);
 
         input.Set(data);    // 결정된 입력을 서버쪽으로 전달
     }

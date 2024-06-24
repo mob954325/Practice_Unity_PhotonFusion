@@ -1,7 +1,10 @@
 using Fusion;
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class Player : NetworkBehaviour
 {
@@ -28,12 +31,31 @@ public class Player : NetworkBehaviour
     /// </summary>
     public Material bodyMaterial;
 
+    PlayerInputActions inputActions;
+
+    TMP_Text messageText;
+
     void Awake()
     {
         cc = GetComponent<NetworkCharacterController>();
         Transform child = transform.GetChild(0);
         bodyMaterial = child.GetComponent<Renderer>()?.material;
+
+        inputActions = new PlayerInputActions();
     }
+
+    private void OnEnable()
+    {
+        inputActions.Player.Enable();
+        inputActions.Player.Chat.performed += OnChat;
+    }
+
+    private void OnDisable()
+    {
+        inputActions.Player.Chat.performed -= OnChat;        
+        inputActions.Player.Disable();
+    }
+
     /// <summary>
     /// 네트워크 틱별로 계속 실행되는 함수
     /// </summary>
@@ -108,5 +130,46 @@ public class Player : NetworkBehaviour
 
         // Render는 유니티 랜더 루프상에서 작동 => Update와 같은 간격
         bodyMaterial.color = Color.Lerp(bodyMaterial.color, Color.blue, Time.deltaTime * 2);
+    }
+
+    // RPC 발동용 입력처리 함수
+    private void OnChat(InputAction.CallbackContext context)
+    {
+        if(Object.HasInputAuthority)    // 입력권한이 있을때 (자기 Player 일때)
+        {
+            Rpc_SendMessage("Hello, World");    // "Hello world 라고 호스트에게 보냄
+        }
+    }
+
+    // 소스는 입력권한이 있어야한다. = 내 Player이어야한다.
+    // 타겟은 상태권한이 있어야한다 = 타켓은 호스트이다.
+    // 호스트 모드는 SourceIsHostPlayer = 플레이어 입장에서 RPC를 호출한다.
+    [Rpc(RpcSources.InputAuthority, RpcTargets.StateAuthority, HostMode = RpcHostMode.SourceIsHostPlayer)]
+    public void Rpc_SendMessage(string message, RpcInfo info = default)
+    {
+        Rpc_RelayMessage(message, info.Source); // info.Source는 로컬 플레이어 ( 자기 자신의 PlyaerRef )
+    }
+
+    // 소스는 상태권한이 있어야한다. = 소스가 호스트
+    // 타겟은 모드 = 받은내용을 모두에게 전파하는 용도
+    // 호스트 모드는 SourceIsServer = 서버 입장에서 RPC를 보낸다.
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All, HostMode = RpcHostMode.SourceIsServer)]
+    public void Rpc_RelayMessage(string message, PlayerRef messageSource)
+    {
+        if (messageText == null)
+            messageText = FindAnyObjectByType<TMP_Text>();
+
+        if(messageSource == Runner.LocalPlayer)
+        {
+            // 서버가 내가 보낸 메세지를 나에게 보낸 경우
+            message = $"You : {message}\n";
+        }
+        else
+        {
+            //  서버가 다른 사람이 보낸 메세지를 받은 경우
+            message = $"Other : {message}\n";
+        }
+
+        messageText.text += message;
     }
 }

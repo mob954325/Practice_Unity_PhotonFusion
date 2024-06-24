@@ -302,4 +302,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 75e5611f9b6cbbc41abfd6c01c00dcd2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  speed: 10
+  moveSpeed: 5
+  prefabBall: {fileID: -6882342779072512779, guid: 960cb8b18f3ee2b41a362fa32c488d73, type: 3}
+  prefabBall_Physx: {fileID: 5234731258075392148, guid: dd3658268649b084992e6931b9fab96f, type: 3}

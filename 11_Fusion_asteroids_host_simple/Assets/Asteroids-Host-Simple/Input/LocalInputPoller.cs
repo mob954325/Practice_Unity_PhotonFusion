@@ -12,11 +12,15 @@ namespace Asteroids.HostSimple
         private const string AXIS_HORIZONTAL = "Horizontal";
         private const string AXIS_VERTICAL = "Vertical";
         private const string BUTTON_FIRE1 = "Fire1";
-        private const string BUTTON_JUMP = "Jump"; // Can be used as an alternative fire button to shoot with SPACE
+        private const string BUTTON_JUMP = "Jump"; // 스페이스 키로 발사하고 싶을 때 Space 사용 가능 
 
         // The INetworkRunnerCallbacks of this LocalInputPoller are automatically detected
         // because the script is located on the same object as the NetworkRunner and
         // NetworkRunnerCallbacks scripts.
+
+        // LocalInputPoller는 NetworkRunner와 같은 게임 오브젝트에 들어있기 때문에 AddCallBack를 사용하지 않아도 자동으로 감지된다.
+
+        // 서버에게 입력 전달
 
         public void OnInput(NetworkRunner runner, NetworkInput input)
         {

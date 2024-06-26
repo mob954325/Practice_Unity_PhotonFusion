@@ -23,8 +23,9 @@ namespace Asteroids.HostSimple
         // 게임의 세션 길이 ( 딱히 사용되고 있지 않음 )
         [SerializeField] private float _gameSessionLength = 180.0f;
 
-        // 시작 / 종료 딜레이 표시용
+        // 시작 / 종료 딜레이 표시용 ( 인스펙터 창에서 따로 추가 )
         [SerializeField] private TextMeshProUGUI _startEndDisplay = null;       
+        // 세선 딜레이 표시용 ( 인스펙터 창에서 따로 추가 )
         [SerializeField] private TextMeshProUGUI _ingameTimerDisplay = null; 
 
         [Networked] private TickTimer _timer { get; set; }      // 타이머 ( 시작 / 종료 / 세션 모두 사용 )
@@ -32,7 +33,6 @@ namespace Asteroids.HostSimple
         [Networked] private GameState _gameState { get; set; }  // 개임 상태
 
         [Networked] private NetworkBehaviourId _winner { get; set; }
-
 
         private List<NetworkBehaviourId> _playerDataNetworkedIds = new List<NetworkBehaviourId>();
 

@@ -3,7 +3,6 @@ using UnityEngine;
 
 namespace Asteroids.HostSimple
 {
-
     // SpaceshipSpawner도 호스트에서만 실행되고 파라미터도 네트워크로 공유 될 필요가 없다.
     public class SpaceshipSpawner : NetworkBehaviour, IPlayerJoined, IPlayerLeft
     {
@@ -13,67 +12,72 @@ namespace Asteroids.HostSimple
         // 게임이 준비되었는 지 확인용
         private bool _gameIsReady = false;
 
+        // 게임 상태 컨트롤러 ( 씬전환, 종료 처리 등등 )
         private GameStateController _gameStateController = null;
 
         // 우주선이 스폰될 위치
         private SpawnPoint[] _spawnPoints = null;
 
+        // 이 네트워크 오브젝트가 네트워크에 생성되면 실행되는 함수
         public override void Spawned()
         {
-            if (Object.HasStateAuthority == false) return;
+            if (Object.HasStateAuthority == false) return;  // 호스트인지 확인
             // Collect all spawn points in the scene.
-            _spawnPoints = FindObjectsOfType<SpawnPoint>();
+            _spawnPoints = FindObjectsOfType<SpawnPoint>(); // 호스트만 스폰 포인트를 가짐, 씬에서 스폰포인트 찾아 놓기
         }
 
-        // The spawner is started when the GameStateController switches to GameState.Running.
+        // 게임 상태가 러닝 상태가 되면 스포너를 시작 시킨다.
         public void StartSpaceshipSpawner(GameStateController gameStateController)
         {
-            _gameIsReady = true;
-            _gameStateController = gameStateController;
+            _gameIsReady = true;    // 스포너가 준비되었다고 표시
+            _gameStateController = gameStateController; // 게임 상태 컨트롤러 저장
             foreach (var player in Runner.ActivePlayers)
             {
-                SpawnSpaceship(player);
+                SpawnSpaceship(player); // 모든 활성화된 플레이어에 대해 배를 생성
             }
         }
 
-        // Spawns a new spaceship if a client joined after the game already started
+        // 클라이언트가 게임 시작 이후에 접속하면 새 배를 생성하는 함수
         public void PlayerJoined(PlayerRef player)
         {
-            if (_gameIsReady == false) return;
-            SpawnSpaceship(player);
+            if (_gameIsReady == false) return;  // 스포너가 레디 상태가 아니면 스킵
+            SpawnSpaceship(player);             // 해당 플레이어에 대한 배 생성
         }
 
-        // Spawns a spaceship for a player.
-        // The spawn point is chosen in the _spawnPoints array using the implicit playerRef to int conversion 
+        // 플레이어를 위한 우주선을 스폰하는 함수 ( 스폰위치는 palyerRef로 결정)
         private void SpawnSpaceship(PlayerRef player)
         {
-            // Modulo is used in case there are more players than spawn points.
+            // Modulo 연산을 이용해서 플레이어의 스폰위치 결정
             int index = player.PlayerId % _spawnPoints.Length;
             var spawnPosition = _spawnPoints[index].transform.position;
 
+            // 우주선 스폰
             var playerObject = Runner.Spawn(_spaceshipNetworkPrefab, spawnPosition, Quaternion.identity, player);
             // Set Player Object to facilitate access across systems.
-            Runner.SetPlayerObject(player, playerObject);
+            Runner.SetPlayerObject(player, playerObject); // PlayerRef와 생성한 네트워크 오브젝트를 연결하기
 
-            // Add the new spaceship to the players to be tracked for the game end check.
+            // 새 우주선 _gameStateController가 추적할 수 있도록 추가
             _gameStateController.TrackNewPlayer(playerObject.GetComponent<PlayerDataNetworked>().Id);
         }
 
         // Despawns the spaceship associated with a player when their client leaves the game session.
+        // 클라리언트가 게임 세션을 떠나면 실행되는 함수( 호스트에서만 실행됨 )
         public void PlayerLeft(PlayerRef player)
         {
-            DespawnSpaceship(player);
+            // 호스트쪽에서만 실행됨
+            DespawnSpaceship(player);   // 나간 플레이어 디스폰 시키기
         }
 
+        // 우주선을 디스폰시키는 함수
         private void DespawnSpaceship(PlayerRef player)
         {
-            if (Runner.TryGetPlayerObject(player, out var spaceshipNetworkObject))
+            if (Runner.TryGetPlayerObject(player, out var spaceshipNetworkObject))  // 러너에 맞는지 확인
             {
-                Runner.Despawn(spaceshipNetworkObject);
+                Runner.Despawn(spaceshipNetworkObject); // 있으면 디스폰
             }
 
             // Reset Player Object
-            Runner.SetPlayerObject(player, null);
+            Runner.SetPlayerObject(player, null);   // 플레이어 오브젝트를 null로 리셋
         }
     }
 }

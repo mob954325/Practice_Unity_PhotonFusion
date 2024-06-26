@@ -79,10 +79,26 @@ namespace Asteroids.HostSimple
                     break;
                 case GameState.Running:
                     UpdateRunningDisplay();
-                    // Ends the game if the game session length has been exceeded
-                    if (_timer.ExpiredOrNotRunning(Runner))
+                    if (_timer.ExpiredOrNotRunning(Runner)) // _gameSessionLength 시간이 만료되면 게임 종료
                     {
-                        GameHasEnded(); // _gameSessionLength 시간이 만료되면 게임 종료
+                        // _playerDataNetworkedIds를 순회하면서 점수가 가장 높은 사람을 승리자로 결정
+                        PlayerDataNetworked winner; // 승리자
+                        Runner.TryFindBehaviour(_playerDataNetworkedIds[0], out winner);    // 첫번째 사람을 무조건 승리자로 설정
+
+                        for (int i = 1; i < _playerDataNetworkedIds.Count; i++) // 남은 사람들을 순회하기
+                        {
+                            if (Runner.TryFindBehaviour(_playerDataNetworkedIds[i],
+                                    out PlayerDataNetworked playerDataNetworkedComponent))
+                            {
+                                if(winner.Score <= playerDataNetworkedComponent.Score)  // 순회 중에 승리자보다 높은 사람이 있으면 승리자 변경
+                                {
+                                    winner = playerDataNetworkedComponent;
+                                }
+                            }                           
+                        }
+                        _winner = winner.Id;
+
+                        CheckIfGameHasEnded();
                     }
                     break;
                 case GameState.Ending:
@@ -205,6 +221,7 @@ namespace Asteroids.HostSimple
             _gameState = GameState.Ending;  // 게임 상태를 Ending으로 변경
         }
 
+        // 새 플레이어를 리스트에 추가 ( 종료 체크 용 )
         public void TrackNewPlayer(NetworkBehaviourId playerDataNetworkedId)
         {
             _playerDataNetworkedIds.Add(playerDataNetworkedId);

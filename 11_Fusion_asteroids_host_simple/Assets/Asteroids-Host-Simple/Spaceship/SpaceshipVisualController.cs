@@ -5,9 +5,6 @@ using UnityEngine;
 
 namespace Asteroids.HostSimple
 {
-    // Class controlling the visual representation of the spaceship (turning the 3D model on / off)
-    // and visual feedback for the player (engine & destruction VFX)
-
     // 우주선의 비주얼적인 면을 컨트롤하는 클래스 ( 엔진 불길과 파괴용 VFX로 파견 )
     public class SpaceshipVisualController : MonoBehaviour
     {
@@ -28,8 +25,8 @@ namespace Asteroids.HostSimple
                 r.material.color = GetColor(playerID);  // 모든 랜더러의 머터리얼의 색상을 플레이어 i
             }
         }
-
-        // 스폰되었을 때 실행
+        
+        // 스폰되었을 때 실행 ( 죽었다 살아났을 때 )
         public void TriggerSpawn()
         {
             _spaceshipModel.enabled = true; // 모델 보여주기

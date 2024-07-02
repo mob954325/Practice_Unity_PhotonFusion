@@ -61,7 +61,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 10303, guid: 0000000000000000f000000000000000, type: 0}
+  - {fileID: 2100000, guid: ba996a2bd255c8f45878287da9821f5d, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -92,6 +92,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5546574892275868585}
+  - component: {fileID: 2276614557144161971}
   - component: {fileID: 1214605780376829261}
   - component: {fileID: 5066253734216513766}
   - component: {fileID: 3725944879148895835}
@@ -118,6 +119,19 @@ Transform:
   - {fileID: 7083380803524782512}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2276614557144161971
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8942166787987178993}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9a0cb736cbe226948b3b0558b0d7f75c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  prefabBall: {fileID: 4151861223658061899, guid: b6fc4bbd73087e54398b39cd8ee64858, type: 3}
 --- !u!114 &1214605780376829261
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -135,6 +149,7 @@ MonoBehaviour:
   Flags: 262145
   NestedObjects: []
   NetworkedBehaviours:
+  - {fileID: 2276614557144161971}
   - {fileID: 5066253734216513766}
 --- !u!114 &5066253734216513766
 MonoBehaviour:

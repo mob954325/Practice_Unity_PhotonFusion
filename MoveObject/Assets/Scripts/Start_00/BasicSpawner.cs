@@ -15,6 +15,32 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
     /// </summary>
     private NetworkRunner runner;
 
+    /// <summary>
+    /// 플레이어 프리팹 레퍼런스
+    /// </summary>
+    [SerializeField] private NetworkPrefabRef playerPrefab;
+
+    /// <summary>
+    /// 접속한 플레이어 추적을 위한 리스트
+    /// </summary>
+    private Dictionary<PlayerRef, NetworkObject> spawnedCharacters = new Dictionary<PlayerRef, NetworkObject>();
+
+    /// <summary>
+    /// 왼쪽클릭 입력 확인용 변수
+    /// </summary>
+    private bool mouseButton0;
+
+    // 생명 함수 ========================================================================================================
+
+    private void Update()
+    {
+        // 마우스 버튼 입력 비트 확인, 마우스를 입력하거나 입력이 되어있으면 1 아니면 0
+        mouseButton0 = mouseButton0 | Input.GetMouseButton(0);
+    }
+
+
+    // 기능 함수 ========================================================================================================
+
     async void StartGame(GameMode mode)
     {
         runner = gameObject.AddComponent<NetworkRunner>();
@@ -54,6 +80,57 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
         }
     }
 
+    // NetWorkRunnerCallBack ===================================================================================================
+
+    // 플레이어가 들어왔을 때 호출되는 함수
+    public void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
+    {
+        if(runner.IsServer)
+        {
+            // 플레이어 고유 포지션 생성
+            Vector3 spawnPosition = new Vector3((player.RawEncoded % runner.Config.Simulation.PlayerCount) * 3, 1, 0);
+            NetworkObject networkPlayerObject = runner.Spawn(playerPrefab, spawnPosition, Quaternion.identity, player);
+
+            // 플레이어를 쉽게 접근하기 위해 리스트 추가
+            spawnedCharacters.Add(player, networkPlayerObject);
+        }
+    }
+    
+    // 플레이어가 나갔을 때 호출되는 함수
+    public void OnPlayerLeft(NetworkRunner runner, PlayerRef player)
+    {
+        // 플레이어 찾기
+        if(spawnedCharacters.TryGetValue(player, out NetworkObject networkObject))
+        {
+            runner.Despawn(networkObject);      // 디스폰
+            spawnedCharacters.Remove(player);   // 리스트 제거
+        }
+    }
+
+    public void OnInput(NetworkRunner runner, NetworkInput input)
+    {
+        var data = new NetworkInputData();
+
+        if (Input.GetKey(KeyCode.W))
+            data.direction += Vector3.forward;
+
+        if (Input.GetKey(KeyCode.S))
+            data.direction += Vector3.back;
+
+        if (Input.GetKey(KeyCode.A))
+            data.direction += Vector3.left;
+
+        if (Input.GetKey(KeyCode.D))
+            data.direction += Vector3.right;
+
+        data.buttons.Set(NetworkInputData.MOUSEBUTTON0, mouseButton0);
+        mouseButton0 = false; // 마우스 입력 해제
+
+        input.Set(data);
+    }
+
+
+    // 사용 안함 ===================================================================================================================================
     public void OnConnectedToServer(NetworkRunner runner)
     {
     }
@@ -78,10 +155,6 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
     {
     }
 
-    public void OnInput(NetworkRunner runner, NetworkInput input)
-    {
-    }
-
     public void OnInputMissing(NetworkRunner runner, PlayerRef player, NetworkInput input)
     {
     }
@@ -91,14 +164,6 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
     }
 
     public void OnObjectExitAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player)
-    {
-    }
-
-    public void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
-    {
-    }
-
-    public void OnPlayerLeft(NetworkRunner runner, PlayerRef player)
     {
     }
 

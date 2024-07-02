@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 using Fusion;
 using Fusion.Sockets;
@@ -13,6 +14,45 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
     /// 네트워크 러너
     /// </summary>
     private NetworkRunner runner;
+
+    async void StartGame(GameMode mode)
+    {
+        runner = gameObject.AddComponent<NetworkRunner>();
+        runner.ProvideInput = true; // 입력을 제공할 것을 알림
+
+        // 현재씬의 네트워크 씬인포(NetworkSceneInfo) 생성
+        var scene = SceneRef.FromIndex(SceneManager.GetActiveScene().buildIndex);
+        var sceneInfo = new NetworkSceneInfo();
+        if(scene.IsValid)
+        {
+            sceneInfo.AddSceneRef(scene, LoadSceneMode.Additive); // sceneInfo의 씬 리스트에 씬 추가
+        }
+
+        // 특정 세션 이름으로 게임모드에 따라서 시작 또는 참가
+        await runner.StartGame(new StartGameArgs()
+        {
+            GameMode = mode,
+            SessionName = "TestRoom",
+            Scene = scene,
+            SceneManager = gameObject.AddComponent<NetworkSceneManagerDefault>()
+        });
+    }
+
+    // 게임 시작될 때 생성될 GUI(게임 모드에 따른 참가)
+    private void OnGUI()
+    {
+        if(runner == null)
+        {
+            if(GUI.Button(new Rect(0,0,200,40), "Host"))
+            {
+                StartGame(GameMode.Host);
+            }
+            if(GUI.Button(new Rect(0, 40, 200, 40), "Join"))
+            {
+                StartGame(GameMode.Client);
+            }
+        }
+    }
 
     public void OnConnectedToServer(NetworkRunner runner)
     {

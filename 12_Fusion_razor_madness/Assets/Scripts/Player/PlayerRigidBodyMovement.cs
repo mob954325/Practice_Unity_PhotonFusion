@@ -37,38 +37,57 @@ public class PlayerRigidBodyMovement : NetworkBehaviour
     // 최대치를 넘어섰을 때 감쇄용(수직)
     private Vector2 _verticalSpeedReduceVector = new Vector2(1, .95f);      // 5% 감소
 
+    // 콜라이더
     private Collider2D _collider;
+
+    // 땅에 닿았으면 true, 아니면 false
     [Networked]
     private NetworkBool IsGrounded { get; set; }
+
+    // 벽에 닿았으면 true, 아니면 false
     private bool _wallSliding;
+
+    // 벽점프용 노멀벡터, 벽이 왼쪽에 있으면 오른쪽,  벽이 오른쪽에 있으면 왼쪽을 가리킨다.
     private Vector2 _wallSlidingNormal;
 
+    // 긴 점프용?
     private float _jumpBufferThreshold = .2f;
     private float _jumpBufferTime;
 
+    // 코요테 타임 (발판이 없이도 일정 시간동안 점프 가능하게 하는 것)용 임계값
     [Networked]
     private float CoyoteTimeThreshold { get; set; } = .1f;
+
+    // 땅에서 떨어지고 나서 지난 시간 (점프 말고 바닥이 없는데 앞으로 간 경우의 시간)
     [Networked]
     private float TimeLeftGrounded { get; set; }
+
+    // 코요테 타임 중인지 아닌지? 점프로 바닥에 떨어져는지 아니면 절벽에서 떨어졌는지 체크용?
     [Networked]
     private NetworkBool CoyoteTimeCD { get; set; }
+
+    // 이전 프레임에 땅에 닿았는지 확인
     [Networked]
     private NetworkBool WasGrounded { get; set; }
 
+    // Rigidbody 벨로시티 (참조용)
     [Networked] public Vector3 Velocity { get; set; }
 
     [Space()]
     [Header("Particle")]
+    // 파티클을 풀로 관리하는 스크립터블 오브젝트 클래스
     [SerializeField] private ParticleManager _particleManager;
 
     [Space()]
     [Header("Sound")]
+    // 사운드 관련
     [SerializeField] private SoundChannelSO _sfxChannel;
     [SerializeField] private SoundSO _jumpSound;
     [SerializeField] private AudioSource _playerSource;
 
     void Awake()
     {
+        // 컴포넌트 찾기
         _rb = GetComponent<NetworkRigidbody2D>();
         _collider = GetComponentInChildren<Collider2D>();
         _behaviour = GetBehaviour<PlayerBehaviour>();
@@ -77,52 +96,66 @@ public class PlayerRigidBodyMovement : NetworkBehaviour
 
     public override void Spawned()
     {
+        // Object.InputAuthority 플레이어가 Object를 항상 관심있게 보고있다.? (리플레케이트 될 필요가 없음, 클라이언트 측에서 예측을 하기 때문에?)
         Runner.SetPlayerAlwaysInterested(Object.InputAuthority, Object, true);
     }
 
     /// <summary>
-    /// Detects grounded and wall sliding state
+    /// 바닥에 닿았거나 벽에 닿은 상태인지 확인하는 함수 (물리 프레임 업데이트 마다 실행됨)
     /// </summary>
     private void DetectGroundAndWalls()
     {
-        WasGrounded = IsGrounded;
-        IsGrounded = default;
+        WasGrounded = IsGrounded;   // 이전에 바닥에 닿았는지 기록
+        IsGrounded = default;       // 초기화
         _wallSliding = default;
 
-        IsGrounded = (bool)Runner.GetPhysicsScene2D().OverlapBox((Vector2)transform.position + Vector2.down * (_collider.bounds.extents.y - .3f), Vector2.one * .85f, 0, _groundLayer);
+        // 지금 바닥에 닿았는지 체크 (캐릭터 컬라이더에서 바닥쪽으로 약간만 나가는 영역으로 체크)
+        IsGrounded = (bool)Runner.GetPhysicsScene2D().OverlapBox(
+            (Vector2)transform.position + Vector2.down * (_collider.bounds.extents.y - .3f), // 오버랩할 박스의 위치 구하기
+            Vector2.one * .85f, // 오버랩 박스의 크기 결정
+            0,                  // 회전 없음
+            _groundLayer);      // 땅 레이어를 체크
+
         if (IsGrounded)
         {
-            CoyoteTimeCD = false;
-            return;
+            CoyoteTimeCD = false;   // CoyoteTimeCD를 false로 설정하고
+            return;                 // 함수 종료 (바닥 체크가 충돌용 컬라이더보다 작기때문에 바닥에 닿았다고 체크되면 벽에 닿을일은 없음
         }
 
+        // 이전 프레임에 바닥에 닿았으면 
         if (WasGrounded)
         {
-            if (CoyoteTimeCD)
+            if (CoyoteTimeCD)   // 점프를 하면 CoyoteTimeCD가 true가 된다. 
             {
                 CoyoteTimeCD = false;
             }
             else
             {
-                TimeLeftGrounded = Runner.SimulationTime;
+                TimeLeftGrounded = Runner.SimulationTime;   // 마지막 FixedUpdateNetwork에서 얼마나 지났는지를 기록
             }
         }
 
-        _wallSliding = Runner.GetPhysicsScene2D().OverlapCircle(transform.position + Vector3.right * (_collider.bounds.extents.x), .1f, _groundLayer);
+        // 오른쪽에 벽이 있는지 확인
+        _wallSliding = Runner.GetPhysicsScene2D().OverlapCircle(
+            transform.position + Vector3.right * (_collider.bounds.extents.x),  // 원의 위치 (컬라이더의 오른쪽 면)
+            .1f,            // 원의 반지름
+            _groundLayer);  // 확인할 레이어 
         if (_wallSliding)
         {
-            _wallSlidingNormal = Vector2.left;
+            // 오른쪽에 벽이 있다.
+            _wallSlidingNormal = Vector2.left;  // 벽 점프용 노멀 벡터
             return;
         }
         else
         {
+            // 왼쪽에 벽이 있는지 확인
             _wallSliding = Runner.GetPhysicsScene2D().OverlapCircle(transform.position - Vector3.right * (_collider.bounds.extents.x), .1f, _groundLayer);
             if (_wallSliding)
             {
-                _wallSlidingNormal = Vector2.right;
+                // 왼쪽에 벽이 있다.
+                _wallSlidingNormal = Vector2.right; // 벽 점프용 노말값 설정
             }
         }
-
     }
 
     public bool GetGrounded()
@@ -132,52 +165,52 @@ public class PlayerRigidBodyMovement : NetworkBehaviour
 
     public override void FixedUpdateNetwork()
     {
-        if (GetInput<InputData>(out var input))
+        if (GetInput<InputData>(out var input)) // 입력 값 받아오기
         {
-            var pressed = input.GetButtonPressed(_inputController.PrevButtons);
-            _inputController.PrevButtons = input.Buttons;
-            UpdateMovement(input);
-            Jump(pressed);
-            BetterJumpLogic(input);
+            var pressed = input.GetButtonPressed(_inputController.PrevButtons); // PrevButtons(이전 버튼 상태)를 임시로 저장하고
+            _inputController.PrevButtons = input.Buttons;   // 새 버튼 상태를 PrevButtons에 기록
+            UpdateMovement(input);  // 현재 버튼 상태를 기반으로 움직임 처리
+            Jump(pressed);          // 이전 버튼 상태를 기반으로 점프 처리
+            BetterJumpLogic(input); // 현재 버튼 상태를 기반으로 더 좋은 점프로직을 실행
         }
 
-        Velocity = _rb.Rigidbody.velocity;
+        Velocity = _rb.Rigidbody.velocity;  // 외부 참조용 Velocity에 리지드바디의 벨로시티 저장
     }
 
+    // 이동 처리용 함수
     void UpdateMovement(InputData input)
     {
-        DetectGroundAndWalls();
+        DetectGroundAndWalls(); // 바닥에 닿았는지 확인
 
         if (input.GetButton(InputButton.LEFT) && _behaviour.InputsAllowed)  // 입력이 허용된 상황에서 왼쪽 누르기
-        {
-            //Reset x velocity if start moving in oposite direction.
-            if (_rb.Rigidbody.velocity.x > 0 && IsGrounded)
+        {            
+            if (_rb.Rigidbody.velocity.x > 0 && IsGrounded) // 바닥에 있는 상태에서 반대방향으로 움직이고 있으면 
             {
-                _rb.Rigidbody.velocity *= Vector2.up;
+                _rb.Rigidbody.velocity *= Vector2.up;       // 벨로시티의 x값은 0으로 만들기
             }
-            _rb.Rigidbody.AddForce(Vector2.left * _speed * Runner.DeltaTime, ForceMode2D.Force);
+            _rb.Rigidbody.AddForce(Vector2.left * _speed * Runner.DeltaTime, ForceMode2D.Force);    // 입력된 방향으로 힘 추가
         }
         else if (input.GetButton(InputButton.RIGHT) && _behaviour.InputsAllowed)    // 입력이 허용된 상황에서 오른쪽 누르기
         {
-            //Reset x velocity if start moving in oposite direction.
-            if (_rb.Rigidbody.velocity.x < 0 && IsGrounded)
+            if (_rb.Rigidbody.velocity.x < 0 && IsGrounded) // 왼쪽이랑 동일
             {
                 _rb.Rigidbody.velocity *= Vector2.up;
             }
             _rb.Rigidbody.AddForce(Vector2.right * _speed * Runner.DeltaTime, ForceMode2D.Force);
         }
-        else // 입력이 허용되어 있지 않거나, 좌우가 눌러지지 않았다.
+        else // 입력이 허용되어 있지 않거나, 입력이 허용되었더라도 좌우 중 눌러진게 없는 경우
         {
-            //Different horizontal drags depending if grounded or not.
+            // 바닥에 있는지 공중에 있는지에 따라 적절한 마찰력 적용
             if (IsGrounded)
                 _rb.Rigidbody.velocity *= _groundHorizontalDragVector;
             else
                 _rb.Rigidbody.velocity *= _airHorizontalDragVector;
         }
 
-        LimitSpeed();
+        LimitSpeed();   // 속도 제한 걸기
     }
 
+    // 속도 제한거는 함수
     private void LimitSpeed()
     {
         //Limit horizontal velocity
@@ -193,53 +226,59 @@ public class PlayerRigidBodyMovement : NetworkBehaviour
     }
 
     #region Jump
+
+    // 점프처리용 함수 (pressedButtons: 이전 프레임의 입력)
     private void Jump(NetworkButtons pressedButtons)
     {
-
-        //Jump
-        if (pressedButtons.IsSet(InputButton.JUMP) || CalculateJumpBuffer())
+        // 매 물리 프레임마다 실행
+        if (pressedButtons.IsSet(InputButton.JUMP) || CalculateJumpBuffer())    // 점프 버튼이 눌러져 있었거나 점프 버퍼의 계산 결과가 true면 
         {
-            if (_behaviour.InputsAllowed)
+            if (_behaviour.InputsAllowed)   // 입력이 허용되어 있고
             {
-                if (!IsGrounded && pressedButtons.IsSet(InputButton.JUMP))
+                if (!IsGrounded && pressedButtons.IsSet(InputButton.JUMP)) // 공중에 있으면서 이전에 점프 버튼을 누르고 있으면
                 {
-                    _jumpBufferTime = Runner.SimulationTime;
+                    _jumpBufferTime = Runner.SimulationTime;    // 이전 프레임에서 얼마나 지났는지를 기록 (긴점프용?)
                 }
 
-                if (IsGrounded || CalculateCoyoteTime())
+                if (IsGrounded || CalculateCoyoteTime())    // 땅에 닿아있거나 코요테타임 중이면 
                 {
-                    _rb.Rigidbody.velocity *= Vector2.right; //Reset y Velocity
-                    _rb.Rigidbody.AddForce(Vector2.up * _jumpForce, ForceMode2D.Impulse);
-                    CoyoteTimeCD = true;
-                    if (Runner.IsForward && Object.HasInputAuthority)
+                    _rb.Rigidbody.velocity *= Vector2.right; // 벨로시티의 y만 0으로 만들기
+                    _rb.Rigidbody.AddForce(Vector2.up * _jumpForce, ForceMode2D.Impulse);   // 위로 힘을 더하기
+                    CoyoteTimeCD = true;                    // CoyoteTimeCD를 true로 세팅
+                    if (Runner.IsForward && Object.HasInputAuthority)   // 처음 계산되는 경우고, 입력권한을 가지고 있을 경우
                     {
-                        RPC_PlayJumpEffects((Vector2)transform.position - Vector2.up * .5f);
+                        RPC_PlayJumpEffects((Vector2)transform.position - Vector2.up * .5f); // 점프 사운드와 파티클 재생
                     }
                 }
-                else if (_wallSliding)
+                else if (_wallSliding) // 벽에 닿아있는 상태면
                 {
-                    _rb.Rigidbody.velocity *= Vector2.zero; //Reset y and x Velocity
-                    _rb.Rigidbody.AddForce((Vector2.up + (_wallSlidingNormal)) * _jumpForce, ForceMode2D.Impulse);
-                    CoyoteTimeCD = true;
-                    if (Runner.IsForward && Object.HasInputAuthority)
+                    _rb.Rigidbody.velocity *= Vector2.zero; // 벨로시티 초기화
+                    _rb.Rigidbody.AddForce((Vector2.up + (_wallSlidingNormal)) * _jumpForce, ForceMode2D.Impulse);  // 대각선 위로 점프
+                    CoyoteTimeCD = true;    // CoyoteTimeCD를 true로 세팅
+                    if (Runner.IsForward && Object.HasInputAuthority)   // 처음 계산되는 경우고, 입력권한을 가지고 있을 경우
                     {
-                        RPC_PlayJumpEffects((Vector2)transform.position - _wallSlidingNormal * .5f);
+                        RPC_PlayJumpEffects((Vector2)transform.position - _wallSlidingNormal * .5f); // 점프 사운드와 파티클 재생
                     }
                 }
             }
         }
     }
 
+    // 점프 버퍼를 계산하는 함수
     private bool CalculateJumpBuffer()
     {
+        // Runner.SimulationTime : 마지막 FixedUpdateNetwork에서 지난 시간
         return (Runner.SimulationTime <= _jumpBufferTime + _jumpBufferThreshold) && IsGrounded;
     }
 
+    // 코요테 타임을 계산하기 위한 함수
     private bool CalculateCoyoteTime()
     {
+        // 
         return (Runner.SimulationTime <= TimeLeftGrounded + CoyoteTimeThreshold);
     }
 
+    // 점프 소리와 이펙트를 생성하는 요청
     [Rpc(sources: RpcSources.All, RpcTargets.All, HostMode = RpcHostMode.SourceIsHostPlayer)]
     private void RPC_PlayJumpEffects(Vector2 particlePos)
     {
@@ -263,7 +302,7 @@ public class PlayerRigidBodyMovement : NetworkBehaviour
     /// <param name="input"></param>
     private void BetterJumpLogic(InputData input)
     {
-        if (IsGrounded) { return; }         // 공중이고
+        if (IsGrounded) { return; }         // 바닥에 있는 상황이면 종료 (=공중이다)
         if (_rb.Rigidbody.velocity.y < 0)   // 떨어지는 상황
         {
             // 떨어지는 상황이다.

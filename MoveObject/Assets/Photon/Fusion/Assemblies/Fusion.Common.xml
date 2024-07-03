@@ -470,6 +470,11 @@
             <param name="buffer">The ulong that represents the compressed quaternion.</param>
             <returns>The restored Quaternion.</returns>
         </member>
+        <member name="T:Fusion.StatsMetaAttribute">
+            <summary>
+            This stat goes on field elements of classes/structs and is used by FieldsMask.
+            </summary>
+        </member>
         <member name="F:Fusion.RuntimeUnityFlagsSetup.flagsBuildFlags">
             <summary>
             Flags for BuildFlags

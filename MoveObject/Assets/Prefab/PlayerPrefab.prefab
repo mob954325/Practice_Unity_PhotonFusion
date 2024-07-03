@@ -132,6 +132,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   prefabBall: {fileID: 4151861223658061899, guid: b6fc4bbd73087e54398b39cd8ee64858, type: 3}
+  prefabPhysxBall: {fileID: 6564179425640640099, guid: 2413fc0c1484a814e8284ae042ab3793, type: 3}
 --- !u!114 &1214605780376829261
 MonoBehaviour:
   m_ObjectHideFlags: 0

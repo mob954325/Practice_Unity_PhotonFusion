@@ -6,6 +6,7 @@ using UnityEngine.SceneManagement;
 using Fusion;
 using Fusion.Sockets;
 using System;
+using Fusion.Addons.Physics;
 
 // INetworkRunnerCallbacks : Fusion에서 네트워크 시뮬레이션을 실행하기 위한 인터페이스
 public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
@@ -30,12 +31,18 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
     /// </summary>
     private bool mouseButton0;
 
+    /// <summary>
+    /// 오른쪽클릭 입력 확인용 변수
+    /// </summary>
+    private bool mouseButton1;
+
     // 생명 함수 ========================================================================================================
 
     private void Update()
     {
         // 마우스 버튼 입력 비트 확인, 마우스를 입력하거나 입력이 되어있으면 1 아니면 0
         mouseButton0 = mouseButton0 | Input.GetMouseButton(0);
+        mouseButton1 = mouseButton1 | Input.GetMouseButton(1);
     }
 
 
@@ -60,8 +67,10 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
             GameMode = mode,
             SessionName = "TestRoom",
             Scene = scene,
-            SceneManager = gameObject.AddComponent<NetworkSceneManagerDefault>()
+            SceneManager = gameObject.AddComponent<NetworkSceneManagerDefault>()            
         });
+
+        gameObject.AddComponent<RunnerSimulatePhysics3D>();
     }
 
     // 게임 시작될 때 생성될 GUI(게임 모드에 따른 참가)
@@ -125,6 +134,9 @@ public class BasicSpawner : MonoBehaviour, INetworkRunnerCallbacks
 
         data.buttons.Set(NetworkInputData.MOUSEBUTTON0, mouseButton0);
         mouseButton0 = false; // 마우스 입력 해제
+
+        data.buttons.Set(NetworkInputData.MOUSEBUTTON1, mouseButton1);
+        mouseButton1 = false; // 마우스 입력 해제
 
         input.Set(data);
     }
